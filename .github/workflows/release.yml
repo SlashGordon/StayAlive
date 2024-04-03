@@ -1,0 +1,78 @@
+name: Automated Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build and Release on ${{ matrix.os }} for ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+            goos: linux
+            goarch: amd64
+            binary_suffix: linux-amd64
+          - os: ubuntu-latest
+            arch: arm64
+            goos: linux
+            goarch: arm64
+            binary_suffix: linux-arm64
+          - os: ubuntu-latest
+            arch: arm
+            goos: linux
+            goarch: arm
+            binary_suffix: linux-arm
+          - os: macos-latest
+            arch: amd64
+            goos: darwin
+            goarch: amd64
+            binary_suffix: macos-amd64
+          - os: macos-latest
+            arch: arm64
+            goos: darwin
+            goarch: arm64
+            binary_suffix: macos-arm64
+          - os: windows-latest
+            arch: amd64
+            goos: windows
+            goarch: amd64
+            binary_suffix: windows-amd64
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.21.5'
+
+      - name: Build Project
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o stay-alive-${{ matrix.binary_suffix }} ./...
+          
+      - name: Create Release
+        id: create_release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./stay-alive-${{ matrix.binary_suffix }}
+          asset_name: stay-alive-${{ matrix.binary_suffix }}
+          asset_content_type: application/octet-stream
