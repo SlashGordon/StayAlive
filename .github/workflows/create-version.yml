@@ -15,12 +15,8 @@ jobs:
           fetch-depth: '0' # Ensures history for all tags and branches is fetched
   
       - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@1.67.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true # If you want your tags prefixed with 'v', e.g., v1.2.3
-          RELEASE_BRANCHES: main
-          DEFAULT_BUMP: patch # Default to 'patch' but can also be 'minor' or 'major'
-          GIT_API_TAGGING: false
-          # You can also use CUSTOM_TAG to set the tag manually.
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
   
