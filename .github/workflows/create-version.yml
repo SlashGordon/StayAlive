@@ -21,5 +21,6 @@ jobs:
           WITH_V: true # If you want your tags prefixed with 'v', e.g., v1.2.3
           RELEASE_BRANCHES: main
           DEFAULT_BUMP: patch # Default to 'patch' but can also be 'minor' or 'major'
+          GIT_API_TAGGING: false
           # You can also use CUSTOM_TAG to set the tag manually.
   
