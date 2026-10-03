@@ -19,3 +19,7 @@
 
 # Go workspace file
 go.work
+
+# Local build output
+/stay-alive
+/stay-alive-m2
