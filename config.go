@@ -15,7 +15,9 @@ const envPrefix = "STAYALIVE_"
 // Options is everything the command line and environment can set.
 type Options struct {
 	Config
-	Verbose bool
+	Verbose     bool
+	Claude      bool          // exit once no Claude Code session is working
+	ClaudeQuiet time.Duration // a Claude session that wrote nothing for this long counts as done
 }
 
 // loadOptions reads settings from defaults, then environment variables, then
@@ -28,6 +30,7 @@ func loadOptions(args []string, lookupEnv func(string) (string, bool), output io
 			Radius:    100,
 			Poll:      time.Second,
 		},
+		ClaudeQuiet: 15 * time.Minute,
 	}
 
 	env := envReader{lookup: lookupEnv}
@@ -36,6 +39,8 @@ func loadOptions(args []string, lookupEnv func(string) (string, bool), output io
 	opts.Radius = env.int("RADIUS", opts.Radius)
 	opts.Poll = env.duration("POLL", opts.Poll)
 	opts.Verbose = env.bool("VERBOSE", opts.Verbose)
+	opts.Claude = env.bool("CLAUDE", opts.Claude)
+	opts.ClaudeQuiet = env.duration("CLAUDE_QUIET", opts.ClaudeQuiet)
 	if env.err != nil {
 		return opts, env.err
 	}
@@ -47,11 +52,19 @@ func loadOptions(args []string, lookupEnv func(string) (string, bool), output io
 	fs.IntVar(&opts.Radius, "radius", opts.Radius, "maximum distance of a move in pixels (env "+envPrefix+"RADIUS)")
 	fs.DurationVar(&opts.Poll, "poll", opts.Poll, "how often to check for input (env "+envPrefix+"POLL)")
 	fs.BoolVar(&opts.Verbose, "v", opts.Verbose, "log moves and detected activity (env "+envPrefix+"VERBOSE)")
+	fs.BoolVar(&opts.Claude, "claude", opts.Claude, "exit once no Claude Code session is working (env "+envPrefix+"CLAUDE)")
+	fs.DurationVar(&opts.ClaudeQuiet, "claude-quiet", opts.ClaudeQuiet, "a Claude session that wrote nothing for this long counts as done (env "+envPrefix+"CLAUDE_QUIET)")
 	if err := fs.Parse(args); err != nil {
 		return opts, err
 	}
 
-	return opts, opts.validate()
+	if err := opts.validate(); err != nil {
+		return opts, err
+	}
+	if opts.ClaudeQuiet <= 0 {
+		return opts, errors.New("claude quiet time must be positive")
+	}
+	return opts, nil
 }
 
 func (c Config) validate() error {

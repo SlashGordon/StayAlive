@@ -39,7 +39,20 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	if opts.Claude {
+		root, err := claudeProjectsDir()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "stay-alive:", err)
+			os.Exit(1)
+		}
+		ctx = untilClaudeDone(ctx, newClaudeWatcher(root, opts.ClaudeQuiet), logger)
+	}
+
 	logger.Printf("waiting for %s of inactivity", opts.IdleAfter)
 	rng := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 	NewJiggler(opts.Config, robotMouse{}, logger, rng).Run(ctx)
+
+	if errors.Is(context.Cause(ctx), errClaudeDone) {
+		fmt.Fprintln(os.Stderr, "stay-alive:", errClaudeDone)
+	}
 }

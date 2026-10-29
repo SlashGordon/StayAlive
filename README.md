@@ -47,6 +47,9 @@ The moves follow a slightly curved path, speed up and slow down like a hand, sha
   -radius int          maximum distance of a move in pixels (default 100)
   -poll duration       how often to check for input (default 1s)
   -v                   log moves and detected activity
+  -claude              exit once no Claude Code session is working
+  -claude-quiet duration
+                       a Claude session that wrote nothing for this long counts as done (default 15m)
 ```
 
 Every flag can also be set with an environment variable. A flag on the command line wins over the variable.
@@ -58,6 +61,8 @@ Every flag can also be set with an environment variable. A flag on the command l
 | `STAYALIVE_RADIUS`   | `-radius`   | `150` |
 | `STAYALIVE_POLL`     | `-poll`     | `500ms` |
 | `STAYALIVE_VERBOSE`  | `-v`        | `true` |
+| `STAYALIVE_CLAUDE`   | `-claude`   | `true` |
+| `STAYALIVE_CLAUDE_QUIET` | `-claude-quiet` | `30m` |
 
 For example, in your `~/.zshrc`:
 
@@ -67,6 +72,24 @@ export STAYALIVE_INTERVAL=45s
 ```
 
 Pick an interval shorter than your screen lock timeout. Stop the program with Ctrl+C.
+
+### Waiting for Claude Code
+
+With `-claude` Stay Alive keeps the session awake only while Claude Code is working and exits once every session is done. It reads the transcripts Claude Code writes to `~/.claude/projects` (or `$CLAUDE_CONFIG_DIR/projects`) every 10 seconds and needs no hooks or other setup. Sessions that are already running when you start it are included.
+
+A session counts as working while
+
+- its last turn is open: a prompt waits for an answer, or a tool runs or has just returned,
+- a background agent it started has not finished, or
+- a workflow it started has not reached a final state.
+
+A turn is over when Claude has answered, hit a usage limit or you interrupted it. Sessions that are open in a terminal or editor but wait for your next prompt do not count. Neither does a session that has written nothing for the `-claude-quiet` time, such as one waiting for a permission prompt or one that was closed mid-turn. When no session has been working for a minute, Stay Alive prints `stay-alive: all Claude Code sessions are done` and exits. The minute covers the gap between a background agent finishing and Claude picking up its result.
+
+```
+./stay-alive -claude -v
+```
+
+Background shell commands are not visible in the transcripts. If Claude ends its turn while such a command still runs, Stay Alive does not wait for it.
 
 On macOS the terminal that runs Stay Alive needs the Accessibility permission (System Settings > Privacy & Security > Accessibility), otherwise the cursor does not move. Keyboard input is detected on macOS only. On Linux and Windows only mouse movement pauses the program.
 

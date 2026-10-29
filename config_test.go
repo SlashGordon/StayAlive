@@ -68,3 +68,16 @@ func TestLoadOptionsRejectsBadValues(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadOptionsClaude(t *testing.T) {
+	opts, err := loadOptions([]string{"-claude-quiet", "5m"}, envMap(map[string]string{"STAYALIVE_CLAUDE": "true"}), io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !opts.Claude || opts.ClaudeQuiet != 5*time.Minute {
+		t.Errorf("Claude = %v, ClaudeQuiet = %s", opts.Claude, opts.ClaudeQuiet)
+	}
+	if _, err := loadOptions([]string{"-claude-quiet", "0s"}, envMap(nil), io.Discard); err == nil {
+		t.Error("want error for zero quiet time")
+	}
+}
